@@ -4,7 +4,7 @@ TAG := $(GIT_SHA)
 IMAGE_BASE := ghcr.io/$(NAMESPACE)/$(REPO_NAME)
 
 build-prod:
-	docker build -t $(DOCKER_IMAGE):latest .
+	docker build -t $(IMAGE_BASE):latest .
 
 push-prod:
-	docker push $(DOCKER_IMAGE):latest
+	docker push $(IMAGE_BASE):latest
