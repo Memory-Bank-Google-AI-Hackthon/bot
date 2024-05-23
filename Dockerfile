@@ -17,4 +17,6 @@ COPY --from=builder /app/main.exe .
 
 COPY .env ./
 
+EXPOSE 8080
+
 CMD ["./main.exe"]
