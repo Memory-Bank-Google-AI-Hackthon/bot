@@ -1,4 +1,4 @@
-NAMESPACE := weichen-lin
+NAMESPACE := Memory-Bank-Google-AI-Hackthon
 REPO_NAME := bot
 TAG := $(GIT_SHA)
 IMAGE_BASE := ghcr.io/$(NAMESPACE)/$(REPO_NAME)
