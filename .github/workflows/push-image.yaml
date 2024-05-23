@@ -19,11 +19,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.TOKEN_FOR_GHCR }}
 
-      - name: 'Build Image Develop'
+      - name: 'Build Image Prod'
         run: |
           echo ${{ secrets.BOT_ENV }} | base64 -d > .env &&
           make build-prod && make push-prod
 
-      # - name: 'Deploy Image on render'
-      #   run: |
-      #     curl ${{ secrets.DEV_RENDER_URL }}
+      - name: 'Deploy Image on render'
+        run: |
+          curl ${{ secrets.DEPLOY_RENDER_URL }}
