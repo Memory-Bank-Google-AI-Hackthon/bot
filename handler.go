@@ -44,7 +44,7 @@ func NewMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 	case strings.HasPrefix(message.Content, "!take"):
 		discord.ChannelMessageSend(message.ChannelID, "Good Bye👋")
 	default:
-		discord.ChannelMessageSend(message.ChannelID, "I'm sorry, I don't understand what you are saying. Please type !help for help.")
+		return
 	}
 }
 
