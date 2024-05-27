@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -14,16 +17,19 @@ type MessageSave struct {
 	Message string   `json:"message"`
 }
 
+var records = NewRecords()
+
 func NewMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 
 	if message.Author.ID == discord.State.User.ID {
 		return
 	}
 
-	discord.ChannelTyping(message.ChannelID)
-
 	switch {
 	case strings.HasPrefix(message.Content, "!save"):
+
+		discord.ChannelTyping(message.ChannelID)
+
 		msg := GetSaveMessage(message.Content)
 
 		if message.Attachments != nil && len(message.Attachments) > 0 {
@@ -34,16 +40,52 @@ func NewMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
 			msg.Images = images
 		}
 
-		jsonString, err := json.Marshal(msg)
+		_, err := json.Marshal(msg)
 		if err != nil {
 			discord.ChannelMessageSend(message.ChannelID, "Error saving message")
 			return
 		}
 
-		discord.ChannelMessageSend(message.ChannelID, string(jsonString))
+		summary := getSummary(msg)
+
+		discord.ChannelMessageSend(message.ChannelID, summary)
 	case strings.HasPrefix(message.Content, "!take"):
+		discord.ChannelTyping(message.ChannelID)
 		discord.ChannelMessageSend(message.ChannelID, "Good Bye👋")
+	case strings.HasPrefix(message.Content, "!records"):
+		records := records.GetRecords()
+		if len(records) == 0 {
+			discord.ChannelMessageSend(message.ChannelID, "No records found")
+			return
+		}
+
+		for _, record := range records {
+			discord.ChannelMessageSend(message.ChannelID, record.Message)
+		}
+	case strings.HasPrefix(message.Content, "!clear"):
+		records.Clear()
+		discord.ChannelMessageSend(message.ChannelID, "Records cleared")
+	case strings.HasPrefix(message.Content, "!summarize"):
+		discord.ChannelTyping(message.ChannelID)
+		summaries, err := GetGeminiSummary(records.GetRecords())
+		if err != nil {
+			discord.ChannelMessageSend(message.ChannelID, "Error summarizing")
+			return
+		}
+
+		records.Clear()
+
+		for _, summary := range summaries {
+			discord.ChannelMessageSend(message.ChannelID, summary)
+		}
+
 	default:
+		records.AddRecord(Record{
+			UserId:   message.Author.ID,
+			UserName: message.Author.GlobalName,
+			Message:  message.Content,
+		})
+
 		return
 	}
 }
@@ -72,4 +114,24 @@ func GetSaveMessage(message string) *MessageSave {
 	msg.Urls = urls
 
 	return msg
+}
+
+func getSummary(message *MessageSave) string {
+	jsonString, err := json.Marshal(message)
+	if err != nil {
+		return "Error parsing message"
+	}
+
+	res, err := http.Post("https://us-central1-memory-bank-423810.cloudfunctions.net/chatbot-test", "application/json", bytes.NewReader(jsonString))
+	if err != nil {
+		return "Error getting summary"
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "Error reading response"
+	}
+
+	return string(body)
 }
